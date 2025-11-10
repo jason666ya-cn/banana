@@ -11,6 +11,8 @@ export default function ImageUpload() {
   const [preview, setPreview] = useState<string | null>(null)
   const [prompt, setPrompt] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,9 +32,45 @@ export default function ImageUpload() {
     if (!image || !prompt.trim()) return
 
     setIsLoading(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setIsLoading(false)
+    setError(null)
+    setGeneratedImage(null)
+
+    try {
+      const response = await fetch('/api/edit-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image: image,
+          prompt: prompt.trim(),
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to process image edit')
+      }
+
+      const data = await response.json()
+
+      if (data.error) {
+        throw new Error(data.error)
+      }
+
+      // For now, we'll assume the API returns text response
+      // In a real implementation, this might be a base64 image or URL
+      if (data.type === 'image') {
+        setGeneratedImage(data.result)
+      } else {
+        setGeneratedImage(data.result || 'Image processing completed')
+      }
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+      console.error('Error editing image:', err)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -83,7 +121,30 @@ export default function ImageUpload() {
             {isLoading ? (
               <div className="flex flex-col items-center gap-3">
                 <Loader2 size={40} className="text-primary animate-spin" />
-                <p className="text-sm text-foreground/60">Processing...</p>
+                <p className="text-sm text-foreground/60">Processing your image...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center text-red-500 p-4">
+                <p className="text-lg">⚠️</p>
+                <p className="text-sm">{error}</p>
+              </div>
+            ) : generatedImage ? (
+              <div className="w-full h-full p-4 overflow-auto">
+                {/* Check if the result is a base64 image */}
+                {typeof generatedImage === 'string' && generatedImage.startsWith('data:image/') ? (
+                  <img
+                    src={generatedImage}
+                    alt="Generated result"
+                    className="w-full h-full object-contain rounded"
+                  />
+                ) : (
+                  <div className="text-center">
+                    <p className="text-lg">✅</p>
+                    <p className="text-sm text-foreground/80 whitespace-pre-wrap">
+                      {typeof generatedImage === 'string' ? generatedImage : JSON.stringify(generatedImage, null, 2)}
+                    </p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-center text-foreground/40">
