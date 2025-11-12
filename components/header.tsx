@@ -3,10 +3,25 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { SignInButton, UserMenu } from "@/components/auth/social-auth"
+import { useAuth } from "@/hooks/use-auth"
 import { Menu, X } from "lucide-react"
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false)
+  const { user, loading, isAuthenticated } = useAuth()
+
+  const AuthButtons = () => {
+    if (loading) {
+      return <Button variant="outline" disabled>加载中...</Button>
+    }
+
+    if (isAuthenticated && user) {
+      return <UserMenu user={user} />
+    }
+
+    return <SignInButton />
+  }
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
@@ -36,8 +51,7 @@ export default function Header() {
 
           {/* CTA Buttons */}
           <div className="hidden sm:flex gap-3">
-            <Button variant="outline">Sign In</Button>
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">Start Free</Button>
+            <AuthButtons />
           </div>
 
           {/* Mobile Menu Button */}
@@ -62,10 +76,7 @@ export default function Header() {
               Pricing
             </Link>
             <div className="flex flex-col gap-2 pt-2">
-              <Button variant="outline" className="w-full bg-transparent">
-                Sign In
-              </Button>
-              <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">Start Free</Button>
+              <AuthButtons />
             </div>
           </nav>
         )}
